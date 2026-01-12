@@ -1093,6 +1093,7 @@ Item {
     property var _pendingFiles: ({})
     property int _pendingCount: 0
     property bool _sessionsFinalized: false
+    readonly property int sessionLoadTimeoutMs: 2000
 
     function _addSession(path, name, exec) {
         if (!name || !exec || GreeterState.sessionList.includes(name))
@@ -1205,8 +1206,8 @@ Item {
 
         function onReadyToLaunch() {
             const sessionCmd = GreeterState.selectedSession || GreeterState.sessionExecs[GreeterState.currentSessionIndex];
-            const rawSessionPath = GreeterState.selectedSessionPath || GreeterState.sessionPaths[GreeterState.currentSessionIndex];
-            const sessionPath = rawSessionPath ? rawSessionPath.trim() : "";
+            const untrimmedSessionPath = GreeterState.selectedSessionPath || GreeterState.sessionPaths[GreeterState.currentSessionIndex];
+            const sessionPath = untrimmedSessionPath ? untrimmedSessionPath.trim() : "";
             const isValidPath = sessionPath !== "";
             
             console.log("[Greeter] Ready to launch session");
@@ -1285,7 +1286,7 @@ Item {
     // Fallback timer to ensure sessions are finalized
     Timer {
         id: sessionLoadFallback
-        interval: 2000
+        interval: sessionLoadTimeoutMs
         running: isPrimaryScreen
         onTriggered: {
             if (_sessionsFinalized)
@@ -1296,7 +1297,7 @@ Item {
                 _sessionsFinalized = true;
                 finalizeSessionSelection();
             } else {
-                console.warn("[Greeter] No sessions loaded after 2 seconds");
+                console.warn("[Greeter] No sessions loaded after", sessionLoadTimeoutMs, "ms");
             }
         }
     }
