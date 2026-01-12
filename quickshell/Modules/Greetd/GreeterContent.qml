@@ -1205,12 +1205,19 @@ Item {
 
         function onReadyToLaunch() {
             const sessionCmd = GreeterState.selectedSession || GreeterState.sessionExecs[GreeterState.currentSessionIndex];
-            const sessionPath = GreeterState.selectedSessionPath || GreeterState.sessionPaths[GreeterState.currentSessionIndex];
+            let sessionPath = GreeterState.selectedSessionPath || GreeterState.sessionPaths[GreeterState.currentSessionIndex];
+            
+            // Additional safety: trim and check validity
+            if (sessionPath) {
+                sessionPath = sessionPath.trim();
+            }
             
             console.log("[Greeter] Ready to launch session");
             console.log("[Greeter] Session command:", sessionCmd);
             console.log("[Greeter] Session path:", sessionPath);
             console.log("[Greeter] Current session index:", GreeterState.currentSessionIndex);
+            console.log("[Greeter] selectedSession:", GreeterState.selectedSession);
+            console.log("[Greeter] selectedSessionPath:", GreeterState.selectedSessionPath);
             
             if (!sessionCmd) {
                 console.error("[Greeter] No session command available");
@@ -1219,17 +1226,20 @@ Item {
                 return;
             }
 
-            if (!sessionPath) {
+            if (!sessionPath || sessionPath === "") {
                 console.error("[Greeter] No session path available - cannot save session preference");
+                console.error("[Greeter] sessionPaths array:", JSON.stringify(GreeterState.sessionPaths));
             }
 
             GreeterState.unlocking = true;
             launchTimeout.restart();
             
             // Only save the session path if it's not empty
-            if (sessionPath) {
+            if (sessionPath && sessionPath !== "") {
                 console.log("[Greeter] Saving session path to memory:", sessionPath);
                 GreetdMemory.setLastSessionId(sessionPath);
+            } else {
+                console.warn("[Greeter] Skipping session path save - path is empty or invalid");
             }
             
             GreetdMemory.setLastSuccessfulUser(GreeterState.username);
