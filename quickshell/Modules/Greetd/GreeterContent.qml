@@ -1048,17 +1048,23 @@ Item {
             return;
 
         const savedSession = GreetdMemory.lastSessionId;
+        console.log("[Greeter] Finalizing session selection. Saved session:", savedSession);
+        console.log("[Greeter] Available session paths:", JSON.stringify(GreeterState.sessionPaths));
+        
         if (savedSession) {
             for (var i = 0; i < GreeterState.sessionPaths.length; i++) {
                 if (GreeterState.sessionPaths[i] === savedSession) {
+                    console.log("[Greeter] Found matching session at index", i, ":", GreeterState.sessionList[i]);
                     GreeterState.currentSessionIndex = i;
                     GreeterState.selectedSession = GreeterState.sessionExecs[i] || "";
                     GreeterState.selectedSessionPath = GreeterState.sessionPaths[i];
                     return;
                 }
             }
+            console.log("[Greeter] No matching session found for saved path:", savedSession);
         }
 
+        console.log("[Greeter] Using default session at index 0:", GreeterState.sessionList[0]);
         GreeterState.currentSessionIndex = 0;
         GreeterState.selectedSession = GreeterState.sessionExecs[0] || "";
         GreeterState.selectedSessionPath = GreeterState.sessionPaths[0] || "";
@@ -1086,10 +1092,12 @@ Item {
 
     property var _pendingFiles: ({})
     property int _pendingCount: 0
+    property bool _sessionsFinalized: false
 
     function _addSession(path, name, exec) {
         if (!name || !exec || GreeterState.sessionList.includes(name))
             return;
+        console.log("[Greeter] Adding session:", name, "| Path:", path, "| Exec:", exec);
         GreeterState.sessionList = GreeterState.sessionList.concat([name]);
         GreeterState.sessionExecs = GreeterState.sessionExecs.concat([exec]);
         GreeterState.sessionPaths = GreeterState.sessionPaths.concat([path]);
@@ -1124,8 +1132,12 @@ Item {
 
     function _onFileLoaded(filePath) {
         _pendingCount--;
-        if (_pendingCount === 0)
-            Qt.callLater(finalizeSessionSelection);
+        console.log("[Greeter] File loaded:", filePath, "| Remaining:", _pendingCount);
+        if (_pendingCount === 0) {
+            console.log("[Greeter] All session files loaded. Total sessions:", GreeterState.sessionList.length);
+            _sessionsFinalized = true;
+            finalizeSessionSelection();
+        }
     }
 
     Component {
@@ -1162,6 +1174,7 @@ Item {
                 showDotAndDotDot: false
 
                 onStatusChanged: {
+                    console.log("[Greeter] FolderListModel status changed for", modelData, "- status:", status, "count:", count);
                     if (status !== FolderListModel.Ready)
                         return;
                     for (let i = 0; i < count; i++) {
@@ -1193,15 +1206,32 @@ Item {
         function onReadyToLaunch() {
             const sessionCmd = GreeterState.selectedSession || GreeterState.sessionExecs[GreeterState.currentSessionIndex];
             const sessionPath = GreeterState.selectedSessionPath || GreeterState.sessionPaths[GreeterState.currentSessionIndex];
+            
+            console.log("[Greeter] Ready to launch session");
+            console.log("[Greeter] Session command:", sessionCmd);
+            console.log("[Greeter] Session path:", sessionPath);
+            console.log("[Greeter] Current session index:", GreeterState.currentSessionIndex);
+            
             if (!sessionCmd) {
+                console.error("[Greeter] No session command available");
                 GreeterState.pamState = "error";
                 placeholderDelay.restart();
                 return;
             }
 
+            if (!sessionPath) {
+                console.error("[Greeter] No session path available - cannot save session preference");
+            }
+
             GreeterState.unlocking = true;
             launchTimeout.restart();
-            GreetdMemory.setLastSessionId(sessionPath);
+            
+            // Only save the session path if it's not empty
+            if (sessionPath) {
+                console.log("[Greeter] Saving session path to memory:", sessionPath);
+                GreetdMemory.setLastSessionId(sessionPath);
+            }
+            
             GreetdMemory.setLastSuccessfulUser(GreeterState.username);
             Greetd.launch(sessionCmd.split(" "), ["XDG_SESSION_TYPE=wayland"]);
         }
@@ -1243,6 +1273,22 @@ Item {
         id: placeholderDelay
         interval: 4000
         onTriggered: GreeterState.pamState = ""
+    }
+
+    // Fallback timer to ensure sessions are finalized
+    Timer {
+        id: sessionLoadFallback
+        interval: 2000
+        running: isPrimaryScreen
+        onTriggered: {
+            if (!_sessionsFinalized && GreeterState.sessionList.length > 0) {
+                console.log("[Greeter] Session load fallback triggered. Finalizing with", GreeterState.sessionList.length, "sessions");
+                _sessionsFinalized = true;
+                finalizeSessionSelection();
+            } else if (!_sessionsFinalized) {
+                console.warn("[Greeter] No sessions loaded after 2 seconds");
+            }
+        }
     }
 
     LockPowerMenu {

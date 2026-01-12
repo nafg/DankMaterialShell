@@ -45,25 +45,32 @@ Singleton {
 
     function parseMemory(content) {
         try {
-            if (!content || !content.trim())
+            if (!content || !content.trim()) {
+                console.log("[GreetdMemory] Memory file is empty");
                 return;
+            }
             const memory = JSON.parse(content);
             lastSessionId = memory.lastSessionId || "";
             lastSuccessfulUser = memory.lastSuccessfulUser || "";
+            console.log("[GreetdMemory] Loaded memory - lastSessionId:", lastSessionId, ", lastSuccessfulUser:", lastSuccessfulUser);
         } catch (e) {
-            console.warn("Failed to parse greetd memory:", e);
+            console.warn("[GreetdMemory] Failed to parse greetd memory:", e);
         }
     }
 
     function saveMemory() {
-        memoryFileView.setText(JSON.stringify({
+        const memoryData = {
             "lastSessionId": lastSessionId,
             "lastSuccessfulUser": lastSuccessfulUser
-        }, null, 2));
+        };
+        console.log("[GreetdMemory] Saving memory:", JSON.stringify(memoryData));
+        memoryFileView.setText(JSON.stringify(memoryData, null, 2));
     }
 
     function setLastSessionId(id) {
-        lastSessionId = id || "";
+        const newId = id || "";
+        console.log("[GreetdMemory] setLastSessionId called with:", id, "-> storing:", newId);
+        lastSessionId = newId;
         saveMemory();
     }
 
