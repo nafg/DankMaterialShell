@@ -1212,6 +1212,8 @@ Item {
                 sessionPath = sessionPath.trim();
             }
             
+            const isValidPath = sessionPath && sessionPath !== "";
+            
             console.log("[Greeter] Ready to launch session");
             console.log("[Greeter] Session command:", sessionCmd);
             console.log("[Greeter] Session path:", sessionPath);
@@ -1226,7 +1228,7 @@ Item {
                 return;
             }
 
-            if (!sessionPath || sessionPath === "") {
+            if (!isValidPath) {
                 console.error("[Greeter] No session path available - cannot save session preference");
                 console.error("[Greeter] sessionPaths array:", JSON.stringify(GreeterState.sessionPaths));
             }
@@ -1234,8 +1236,8 @@ Item {
             GreeterState.unlocking = true;
             launchTimeout.restart();
             
-            // Only save the session path if it's not empty
-            if (sessionPath && sessionPath !== "") {
+            // Only save the session path if it's valid
+            if (isValidPath) {
                 console.log("[Greeter] Saving session path to memory:", sessionPath);
                 GreetdMemory.setLastSessionId(sessionPath);
             } else {
@@ -1291,11 +1293,14 @@ Item {
         interval: 2000
         running: isPrimaryScreen
         onTriggered: {
-            if (!_sessionsFinalized && GreeterState.sessionList.length > 0) {
+            if (_sessionsFinalized)
+                return;
+                
+            if (GreeterState.sessionList.length > 0) {
                 console.log("[Greeter] Session load fallback triggered. Finalizing with", GreeterState.sessionList.length, "sessions");
                 _sessionsFinalized = true;
                 finalizeSessionSelection();
-            } else if (!_sessionsFinalized) {
+            } else {
                 console.warn("[Greeter] No sessions loaded after 2 seconds");
             }
         }
