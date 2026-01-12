@@ -1205,14 +1205,9 @@ Item {
 
         function onReadyToLaunch() {
             const sessionCmd = GreeterState.selectedSession || GreeterState.sessionExecs[GreeterState.currentSessionIndex];
-            let sessionPath = GreeterState.selectedSessionPath || GreeterState.sessionPaths[GreeterState.currentSessionIndex];
-            
-            // Additional safety: trim and check validity
-            if (sessionPath) {
-                sessionPath = sessionPath.trim();
-            }
-            
-            const isValidPath = sessionPath && sessionPath !== "";
+            const rawSessionPath = GreeterState.selectedSessionPath || GreeterState.sessionPaths[GreeterState.currentSessionIndex];
+            const sessionPath = rawSessionPath ? rawSessionPath.trim() : "";
+            const isValidPath = sessionPath !== "";
             
             console.log("[Greeter] Ready to launch session");
             console.log("[Greeter] Session command:", sessionCmd);
@@ -1295,7 +1290,7 @@ Item {
         onTriggered: {
             if (_sessionsFinalized)
                 return;
-                
+
             if (GreeterState.sessionList.length > 0) {
                 console.log("[Greeter] Session load fallback triggered. Finalizing with", GreeterState.sessionList.length, "sessions");
                 _sessionsFinalized = true;
